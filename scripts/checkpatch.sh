@@ -23,7 +23,7 @@ pack_loader_image()
 
 			echo "pack Input: ${ini}"
 			./tools/boot_merger ${ini}
-			rm *loader*.bin
+			rm -f *loader*.bin *download*.bin *idblock*.img
 			echo
 		fi
 	done
@@ -37,7 +37,11 @@ pack_trust_image()
 	files=`ls ./RKTRUST/*TOS*.ini`
 	for ini in ${files}
 	do
-		if grep  -q '^PATH=img/' ${ini}; then
+		if ! test -s ${ini}; then
+			continue;
+		elif ! grep  -q '^TOS/' ${ini}; then
+			continue;
+		elif grep  -q '^PATH=img/' ${ini}; then
 			continue;
 		fi
 
@@ -62,7 +66,7 @@ pack_trust_image()
 			else
 				exit 1
 			fi
-			rm trust*.img
+			rm -f trust*.img
 			echo
 		fi
 	done
@@ -94,6 +98,17 @@ check_dirty()
 	done
 }
 
+check_stripped()
+{
+	for elf in `find -name '*bl31*.elf'`; do
+		info=`file ${elf}`
+		if echo ${info} | grep -q "not stripped" ; then
+			echo "ERROR: ${elf} is not stripped"
+			exit 1
+		fi
+	done
+}
+
 finish()
 {
 	echo "Packing loader and trust successfully."
@@ -101,6 +116,7 @@ finish()
 }
 
 check_dirty
+check_stripped
 pack_loader_image
 pack_trust_image
 finish
